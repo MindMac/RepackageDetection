@@ -10,33 +10,36 @@ class RepackageDetection:
 		self.repackage = False
 
 	def detect(self):
-		if not os.path.exists(apk_file_path):
-			return
-		with ZipFile(apk_file_path) as apk:
-			apk.extract('classes.dex', 'dex-out')
-			classes_dex_path = os.path.join(os.getcwd(), 'dex-out', 'classes.dex')
-			if not os.path.exists(classes_dex_path):
+		try:
+			if not os.path.exists(apk_file_path):
 				return
+			with ZipFile(apk_file_path) as apk:
+				apk.extract('classes.dex', 'dex-out')
+				classes_dex_path = os.path.join(os.getcwd(), 'dex-out', 'classes.dex')
+				if not os.path.exists(classes_dex_path):
+					return
 
-			with open(classes_dex_path, 'rb') as classes_dex:
-				# string_ids_size
-				classes_dex.seek(56)
-				string_ids_size = unpack("<i", classes_dex.read(4))[0]
+				with open(classes_dex_path, 'rb') as classes_dex:
+					# string_ids_size
+					classes_dex.seek(56)
+					string_ids_size = unpack("<i", classes_dex.read(4))[0]
 
-				# string_ids_off
-				classes_dex.seek(60)
-				string_ids_off = unpack("<i", classes_dex.read(4))[0]
+					# string_ids_off
+					classes_dex.seek(60)
+					string_ids_off = unpack("<i", classes_dex.read(4))[0]
 
-				last_string_offset = 0
-				for i in xrange(string_ids_size):
-					# string_ids
-					classes_dex.seek(string_ids_off + i*4)
-					cur_string_offset = unpack("<i", classes_dex.read(4))[0]
-					if cur_string_offset > last_string_offset:
-						last_string_offset = cur_string_offset
-					else:
-						self.repackage = True
-						break
+					last_string_offset = 0
+					for i in xrange(string_ids_size):
+						# string_ids
+						classes_dex.seek(string_ids_off + i*4)
+						cur_string_offset = unpack("<i", classes_dex.read(4))[0]
+						if cur_string_offset > last_string_offset:
+							last_string_offset = cur_string_offset
+						else:
+							self.repackage = True
+							break
+		except Exception, ex:
+			print ex
 
 	def is_repackaged(self):
 		return self.repackage
